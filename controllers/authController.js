@@ -37,18 +37,18 @@ const login = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found. Please signup"
+        message: "User not found"
       });
     }
 
     if (user.password !== password) {
       return res.status(401).json({
-        message: "Invalid password"
+        message: "User not authorized"
       });
     }
 
     res.status(200).json({
-      message: "User logged in successfully",
+      message: "User login sucessful",
       userId: user.id,
       name: user.name
     });
