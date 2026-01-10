@@ -1,0 +1,22 @@
+const express = require('express');
+const app = express();
+const cors = require('cors');
+const sequelize = require('./utils/db-connection');
+
+const authRoutes = require('./routes/authRoutes');
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static("public"));
+
+app.use('/dashboard', authRoutes);
+
+sequelize.sync({ force: false }) 
+  .then(() => {
+    app.listen(3000, () => {
+      console.log('Server running on http://localhost:3000');
+    });
+  })
+  .catch((err) => {
+    console.error('Unable to connect to the database:', err);
+  });

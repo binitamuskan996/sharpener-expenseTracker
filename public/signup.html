@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Signup</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: white;
+      padding: 25px;
+      width: 300px;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #1e40af;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h2>Signup</h2>
+
+    <form id="signupForm">
+      <input type="text" id="name" placeholder="Enter name" required />
+      <input type="email" id="email" placeholder="Enter email" required />
+      <input type="password" id="password" placeholder="Enter password" required />
+      <button type="submit">Signup</button>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <script>
+    document.getElementById("signupForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const response = await axios.post(
+          "http://localhost:3000/dashboard/signup",
+          {
+            name: name,
+            email: email,
+            password: password
+          }
+        );
+
+        alert(response.data.message);
+
+        document.getElementById("signupForm").reset();
+
+      } catch (error) {
+        if (error.response) {
+          alert(error.response.data.message);
+        } else {
+          alert("Server error");
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>
