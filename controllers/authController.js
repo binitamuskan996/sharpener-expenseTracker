@@ -1,5 +1,5 @@
-const { where } = require("sequelize");
 const User = require("../models/user");
+const bcrypt = require("bcrypt");
 
 const signup = async (req, res) => {
   try {
@@ -14,11 +14,17 @@ const signup = async (req, res) => {
     if (existingUser) {
       return res.status(409).json({ message: "User already exists" });
     }
+     const saltRounds = 10;
 
-    await User.create({ name, email, password });
+    bcrypt.hash(password, saltRounds, async (err, hash) => {
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ err });
+      }
+    await User.create({ name, email, password: hash });
 
     res.status(201).json({ message: "User registered successfully" });
-
+    });
   } catch (error) {
     res.status(500).json({ message: "Something went wrong" });
   }
@@ -40,8 +46,9 @@ const login = async (req, res) => {
         message: "User not found"
       });
     }
-
-    if (user.password !== password) {
+    const isMatch=await bcrypt.compare(password, user.password);
+    //console.log(isMatch)
+    if (!isMatch) {
       return res.status(401).json({
         message: "User not authorized"
       });
