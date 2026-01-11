@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Daily Expense App</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    form input, form select {
+      margin-right: 10px;
+      padding: 5px;
+    }
+
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    ul {
+      margin-top: 20px;
+      padding: 0;
+    }
+
+    li {
+      list-style: none;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>Daily Expense App</h2>
+
+  <form onsubmit="addExpense(event)">
+    <input type="number" id="amount" placeholder="Amount" required>
+    <input type="text" id="description" placeholder="Description" required>
+
+    <select id="category">
+      <option>Food</option>
+      <option>Petrol</option>
+      <option>Salary</option>
+      <option>Shopping</option>
+    </select>
+
+    <button type="submit">Add Expense</button>
+  </form>
+
+  <ul id="expenseList"></ul>
+
+  <script>
+    const API_URL = 'http://localhost:3000/expense';
+
+    async function addExpense(e) {
+      e.preventDefault();
+
+      const expense = {
+        amount: document.getElementById('amount').value,
+        description: document.getElementById('description').value,
+        category: document.getElementById('category').value
+      };
+
+      try {
+        const res = await axios.post(`${API_URL}/add`, expense);
+        showExpense(res.data.expense);
+
+        e.target.reset();
+      } catch (err) {
+        console.log(err);
+        alert('Error adding expense');
+      }
+    }
+
+    window.onload = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/get`);
+        res.data.expenses.forEach(showExpense);
+      } catch (err) {
+        console.log(err);
+        alert('Error fetching expenses');
+      }
+    };
+
+    function showExpense(expense) {
+      const ul = document.getElementById('expenseList');
+
+      const li = document.createElement('li');
+      li.id = expense.id;
+      li.innerHTML = `
+        ${expense.amount} - ${expense.description} - ${expense.category}
+        <button onclick="deleteExpense(${expense.id})">Delete</button>
+      `;
+
+      ul.appendChild(li);
+    }
+
+    async function deleteExpense(id) {
+      try {
+        await axios.delete(`${API_URL}/delete/${id}`);
+        document.getElementById(id).remove();
+      } catch (err) {
+        console.log(err);
+        alert('Error deleting expense');
+      }
+    }
+  </script>
+
+</body>
+</html>

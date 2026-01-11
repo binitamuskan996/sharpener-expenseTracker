@@ -4,12 +4,14 @@ const cors = require('cors');
 const sequelize = require('./utils/db-connection');
 
 const authRoutes = require('./routes/authRoutes');
+const expenseRoutes = require('./routes/expenseRoutes');
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
 app.use('/dashboard', authRoutes);
+app.use('/expense', expenseRoutes);
 
 sequelize.sync({ force: false }) 
   .then(() => {
