@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>Daily Expense App</title>
+
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
   <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
 
   <style>
@@ -27,10 +29,6 @@
       border-radius: 5px;
       cursor: pointer;
       font-weight: bold;
-    }
-
-    .premium-btn:hover {
-      background: #ffd700;
     }
 
     .premium-badge {
@@ -60,6 +58,16 @@
       list-style: none;
       margin-bottom: 8px;
     }
+
+    #leaderboardBtn {
+      margin-top: 20px;
+      display: none;
+    }
+
+    #leaderboardTitle {
+      margin-top: 30px;
+      display: none;
+    }
   </style>
 </head>
 
@@ -84,40 +92,48 @@
     <button type="submit">Add Expense</button>
   </form>
 
+   <h3>Expenses</h3>
   <ul id="expenseList"></ul>
 
+  <button id="leaderboardBtn" onclick="loadLeaderboard()">
+    Show Leaderboard
+  </button>
+
+  <h3 id="leaderboardTitle">🏆 Leaderboard</h3>
+  <ul id="leaderboard"></ul>
+
   <script>
-    const API_URL = 'http://localhost:3000';
+    const API_URL = "http://localhost:3000";
     let cashfree;
     let isPremiumUser = false;
 
-    const initializeSDK = async () => {
-      cashfree = await Cashfree({
-        mode: "sandbox" 
-      });
-    };
-
-    initializeSDK();
-
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
-      alert('Please login first');
-      window.location.href = 'login.html';
+      alert("Please login first");
+      window.location.href = "login.html";
     }
 
     function getAuthHeaders() {
-      return {
-        'Authorization': localStorage.getItem('token')
-      };
+      return { Authorization: token };
     }
 
-    async function checkPremiumStatus() {
-      const premiumSection = document.getElementById('premiumSection');
-      
+    async function initCashfree() {
+      cashfree = await Cashfree({ mode: "sandbox" });
+    }
+    initCashfree();
+
+    function updatePremiumUI() {
+      const premiumSection = document.getElementById("premiumSection");
+      const leaderboardBtn = document.getElementById("leaderboardBtn");
+
       if (isPremiumUser) {
-        premiumSection.innerHTML = '<span class="premium-badge">⭐ Premium User</span>';
+        premiumSection.innerHTML =
+          '<span class="premium-badge">⭐ Premium User</span>';
+        leaderboardBtn.style.display = "inline-block";
       } else {
-        premiumSection.innerHTML = '<button class="premium-btn" onclick="buyPremium()">Buy Premium Membership</button>';
+        premiumSection.innerHTML =
+          '<button class="premium-btn" onclick="buyPremium()">Buy Premium</button>';
+        leaderboardBtn.style.display = "none";
       }
     }
 
@@ -131,48 +147,41 @@
 
         const { orderId, sessionId } = res.data;
 
-        const checkoutOptions = {
+        cashfree.checkout({
           paymentSessionId: sessionId,
           redirectTarget: "_modal"
-        };
-
-        cashfree.checkout(checkoutOptions).then(async (result) => {
+        }).then(async (result) => {
           if (result.error) {
-            console.error('Payment error:', result.error);
-            await updateTransaction(orderId, 'FAILED');
-            alert('Transaction Failed!');
+            await updateTransaction(orderId, "FAILED");
+            alert("Payment Failed");
           }
-          
+
           if (result.paymentDetails) {
-            console.log('Payment successful:', result.paymentDetails);
-            await updateTransaction(orderId, 'SUCCESS');
+            await updateTransaction(orderId, "SUCCESS");
           }
         });
 
       } catch (err) {
-        console.error('Error purchasing premium:', err);
-        alert('Failed to initiate payment');
+        alert("Failed to initiate payment");
       }
     }
 
     async function updateTransaction(orderId, status) {
       try {
-        const res = await axios.post(
+        await axios.post(
           `${API_URL}/premium/updatetransaction`,
           { orderId, status },
           { headers: getAuthHeaders() }
         );
 
-        if (status === 'SUCCESS') {
-          alert('Transaction Successful! You are now a premium user.');
+        if (status === "SUCCESS") {
+          alert("🎉 You are now a Premium User");
           isPremiumUser = true;
-          checkPremiumStatus();
-        } else {
-          alert('Transaction Failed!');
+          updatePremiumUI();
         }
 
       } catch (err) {
-        console.error('Error updating transaction:', err);
+        console.error(err);
       }
     }
 
@@ -180,61 +189,99 @@
       e.preventDefault();
 
       const expense = {
-        amount: document.getElementById('amount').value,
-        description: document.getElementById('description').value,
-        category: document.getElementById('category').value
+        amount: amount.value,
+        description: description.value,
+        category: category.value
       };
 
       try {
-        const res = await axios.post(`${API_URL}/expense/add`, expense, {
-          headers: getAuthHeaders()
-        });
+        const res = await axios.post(
+          `${API_URL}/expense/add`,
+          expense,
+          { headers: getAuthHeaders() }
+        );
+
         showExpense(res.data.expense);
         e.target.reset();
-      } catch (err) {
-        console.error(err);
-        alert('Error adding expense');
+      } catch {
+        alert("Error adding expense");
       }
     }
 
-    window.onload = async () => {
-      checkPremiumStatus();
-      
-      try {
-        const res = await axios.get(`${API_URL}/expense/get`, {
-          headers: getAuthHeaders()
-        });
-        res.data.expenses.forEach(showExpense);
-      } catch (err) {
-        console.error(err);
-        alert('Error fetching expenses');
-      }
-    };
-
     function showExpense(expense) {
-      const ul = document.getElementById('expenseList');
-
-      const li = document.createElement('li');
+      const li = document.createElement("li");
       li.id = expense.id;
       li.innerHTML = `
         ${expense.amount} - ${expense.description} - ${expense.category}
         <button onclick="deleteExpense(${expense.id})">Delete</button>
       `;
-
-      ul.appendChild(li);
+      expenseList.appendChild(li);
     }
 
     async function deleteExpense(id) {
       try {
-        await axios.delete(`${API_URL}/expense/delete/${id}`, {
-          headers: getAuthHeaders()
-        });
+        await axios.delete(
+          `${API_URL}/expense/delete/${id}`,
+          { headers: getAuthHeaders() }
+        );
         document.getElementById(id).remove();
-      } catch (err) {
-        console.error(err);
-        alert('Error deleting expense');
+      } catch {
+        alert("Error deleting expense");
       }
     }
+
+  async function loadLeaderboard() {
+  try {
+    leaderboardTitle.style.display = "block";
+    leaderboard.innerHTML = "";
+
+    const res = await axios.get(
+      `${API_URL}/premium/showleaderboard`,
+      { headers: getAuthHeaders() }
+    );
+
+    if (!res.data || res.data.length === 0) {
+      leaderboard.innerHTML = "<li>No leaderboard data</li>";
+      return;
+    }
+
+    res.data.forEach(item => {
+      const name = item.UserDet?.name || "Unknown User";
+      const total = item.totalExpense || 0;
+
+      const li = document.createElement("li");
+      li.textContent = `• Name: ${name}, Total Expense: ₹${total}`;
+      leaderboard.appendChild(li);
+    });
+
+  } catch (err) {
+    console.error("Leaderboard error:", err);
+    alert("Failed to load leaderboard");
+  }
+}
+
+
+
+    window.onload = async () => {
+      try {
+        const statusRes = await axios.get(
+          `${API_URL}/premium/status`,
+          { headers: getAuthHeaders() }
+        );
+
+        isPremiumUser = statusRes.data.isPremium;
+        updatePremiumUI();
+
+        const res = await axios.get(
+          `${API_URL}/expense/get`,
+          { headers: getAuthHeaders() }
+        );
+        res.data.expenses.forEach(showExpense);
+
+      } catch (err) {
+        console.error(err);
+      }
+    };
   </script>
 
 </body>

@@ -1,6 +1,8 @@
+const Expense = require('../models/expense');
 const Order = require('../models/order');
 const User = require('../models/user');
 const cashfreeService = require('../services/cashfreeServices');
+const sequelize = require('../utils/db-connection');
 
 exports.purchasePremium = async (req, res) => {
   try {
@@ -71,5 +73,39 @@ exports.updateTransactionStatus = async (req, res) => {
     res.status(500).json({ error: 'Failed to update transaction' });
   }
 };
+exports.getUserStatus = async (req, res) => {
+  try {
+    res.status(200).json({
+      isPremium: req.user.isPremium
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch user status" });
+  }
+};
 
-module.exports = { purchasePremium: exports.purchasePremium, updateTransactionStatus: exports.updateTransactionStatus };
+exports.showLeaderboard = async (req, res) => {
+  try {
+    if (!req.user.isPremium) {
+      return res.status(403).json({ message: "Premium required" });
+    }
+
+    const leaderboard = await Expense.findAll({
+      attributes: [
+        'UserDetId',
+        [sequelize.fn('SUM', sequelize.col('amount')), 'totalExpense']
+      ],
+      group: ['UserDetId'],
+      order: [[sequelize.literal('totalExpense'), 'DESC']],
+      include: [{
+        model: User,
+        attributes: ['name']
+      }]
+    });
+
+    res.status(200).json(leaderboard);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load leaderboard' });
+  }
+};
