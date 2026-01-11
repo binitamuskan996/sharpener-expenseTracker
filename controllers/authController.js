@@ -1,6 +1,6 @@
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
-
+const jwt = require('jsonwebtoken');
 const signup = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -29,6 +29,16 @@ const signup = async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 };
+function generateAccessToken(id, name) {
+  return jwt.sign(
+    {
+      userId: id,
+      name: name
+    },
+    'secretkey'
+  );
+}
+
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -50,14 +60,15 @@ const login = async (req, res) => {
     //console.log(isMatch)
     if (!isMatch) {
       return res.status(401).json({
-        message: "User not authorized"
+        message: "User not authorized",
+        user:user
       });
     }
-
     res.status(200).json({
       message: "User login sucessful",
       userId: user.id,
-      name: user.name
+      name: user.name,
+      token: generateAccessToken(user.id, user.name),
     });
 
   } catch (err) {

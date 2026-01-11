@@ -48,9 +48,9 @@
 
     <select id="category">
       <option>Food</option>
-      <option>Petrol</option>
-      <option>Salary</option>
+      <option>Fuel</option>
       <option>Shopping</option>
+      <option>Movie</option>
     </select>
 
     <button type="submit">Add Expense</button>
@@ -61,6 +61,14 @@
   <script>
     const API_URL = 'http://localhost:3000/expense';
 
+    const token = localStorage.getItem('token');
+    console.log('Token from localStorage:', token);
+    
+    if (!token) {
+      alert('Please login first');
+      window.location.href = 'login.html';
+    }
+
     async function addExpense(e) {
       e.preventDefault();
 
@@ -70,23 +78,44 @@
         category: document.getElementById('category').value
       };
 
-      try {
-        const res = await axios.post(`${API_URL}/add`, expense);
-        showExpense(res.data.expense);
+      const token = localStorage.getItem('token');
+      console.log('Sending request with token:', token);
 
+      try {
+        const res = await axios.post(`${API_URL}/add`, expense, {
+          headers: { 
+            'Authorization': token
+          }
+        });
+        
+        console.log('Response:', res.data);
+        showExpense(res.data.expense);
         e.target.reset();
+        
       } catch (err) {
-        console.log(err);
+        console.error('Error details:', err);
+        console.error('Error response:', err.response);
         alert('Error adding expense');
       }
     }
 
     window.onload = async () => {
+      const token = localStorage.getItem('token');
+      console.log('Fetching expenses with token:', token);
+      
       try {
-        const res = await axios.get(`${API_URL}/get`);
+        const res = await axios.get(`${API_URL}/get`, {
+          headers: { 
+            'Authorization': token
+          }
+        });
+        
+        console.log('Expenses received:', res.data);
         res.data.expenses.forEach(showExpense);
+        
       } catch (err) {
-        console.log(err);
+        console.error('Error fetching expenses:', err);
+        console.error('Error response:', err.response);
         alert('Error fetching expenses');
       }
     };
@@ -105,11 +134,17 @@
     }
 
     async function deleteExpense(id) {
+      const token = localStorage.getItem('token');
+      
       try {
-        await axios.delete(`${API_URL}/delete/${id}`);
+        await axios.delete(`${API_URL}/delete/${id}`, {
+          headers: { 
+            'Authorization': token
+          }
+        });
         document.getElementById(id).remove();
       } catch (err) {
-        console.log(err);
+        console.error('Error deleting expense:', err);
         alert('Error deleting expense');
       }
     }

@@ -7,7 +7,8 @@ const addExpense = async (req, res) => {
     const expense = await Expense.create({
       amount,
       description,
-      category
+      category,
+      UserDetId: req.user.id 
     });
 
     res.status(201).json({ expense });
@@ -18,7 +19,8 @@ const addExpense = async (req, res) => {
 
 const getExpenses = async (req, res) => {
   try {
-    const expenses = await Expense.findAll();
+    const expenses = await Expense.findAll({where: { UserDetId: req.user.id }  
+});
     res.status(200).json({ expenses });
   } catch (err) {
     res.status(500).json({ error: err });
@@ -28,7 +30,7 @@ const getExpenses = async (req, res) => {
 const deleteExpense = async (req, res) => {
   try {
     await Expense.destroy({
-      where: { id: req.params.id }
+      where: { id: req.params.id,UserDetId: req.user.id }
     });
     res.status(200).json({ message: 'Deleted' });
   } catch (err) {

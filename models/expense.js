@@ -1,17 +1,22 @@
-const Sequelize = require('sequelize');
+const { DataTypes } = require("sequelize");
 const sequelize = require('../utils/db-connection');
 
-const Expense = sequelize.define('expenseDetail', {
+const Expense = sequelize.define('expense', {
+    id: {
+          type: DataTypes.INTEGER,
+          primaryKey: true,
+          autoIncrement: true
+        },
   amount: {
-    type: Sequelize.INTEGER,
+    type: DataTypes.INTEGER,
     allowNull: false
   },
   description: {
-    type: Sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: false
   },
   category: {
-    type: Sequelize.STRING,
+    type: DataTypes.STRING,
     allowNull: false
   }
 });
