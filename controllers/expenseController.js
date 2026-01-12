@@ -1,6 +1,36 @@
 const Expense = require('../models/expense');
 const User = require('../models/user');
+let genai = require("@google/genai");
+require('dotenv').config(); 
 
+let ai = new genai.GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY
+});
+
+const categorizeExpense = async (req, res) => {
+  try {
+    const { description } = req.body;
+  console.log(description )
+    const prompt = `Categorize this expense: "${description}". 
+    Return ONLY one word from these exact categories: Food, Fuel, Shopping,Entertainment, Travel, Bills, Healthcare, Education, Other.
+    Just respond with the category name, nothing else.`;
+
+   const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+    });
+
+    let category = response.text.trim();
+ 
+    res.status(200).json({ category });
+
+  } catch (err) {
+    console.error('AI Error:', err);
+    res.status(500).json({ 
+      error: "Failed to categorize",
+    });
+  }
+};
 const addExpense = async (req, res) => {
   try {
     const { amount, description, category } = req.body;
@@ -59,4 +89,4 @@ const deleteExpense = async (req, res) => {
   }
 };
 
-module.exports={addExpense,getExpenses,deleteExpense}
+module.exports={addExpense,getExpenses,deleteExpense,categorizeExpense}

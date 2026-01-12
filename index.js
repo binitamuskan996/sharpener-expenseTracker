@@ -1,6 +1,10 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const dotenv = require('dotenv');
+const { GoogleGenAI } = require('@google/genai'); 
+
+dotenv.config();
 const sequelize = require('./utils/db-connection');
 
 const authRoutes = require('./routes/authRoutes');
