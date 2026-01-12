@@ -25,7 +25,7 @@ Expense.belongsTo(User);
 User.hasMany(Order);
 Order.belongsTo(User);
 
-sequelize.sync({ force: false }) 
+sequelize.sync({ alter:true}) 
   .then(() => {
     app.listen(3000, () => {
       console.log('Server running on http://localhost:3000');

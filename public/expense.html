@@ -185,28 +185,34 @@
       }
     }
 
-    async function addExpense(e) {
-      e.preventDefault();
+   async function addExpense(e) {
+  e.preventDefault();
 
-      const expense = {
-        amount: amount.value,
-        description: description.value,
-        category: category.value
-      };
+  const expense = {
+    amount: amount.value,
+    description: description.value,
+    category: category.value
+  };
 
-      try {
-        const res = await axios.post(
-          `${API_URL}/expense/add`,
-          expense,
-          { headers: getAuthHeaders() }
-        );
+  try {
+    const res = await axios.post(
+      `${API_URL}/expense/add`,
+      expense,
+      { headers: getAuthHeaders() }
+    );
 
-        showExpense(res.data.expense);
-        e.target.reset();
-      } catch {
-        alert("Error adding expense");
-      }
+    showExpense(res.data.expense);
+    e.target.reset();
+
+    if (isPremiumUser) {
+      loadLeaderboard();
     }
+
+  } catch {
+    alert("Error adding expense");
+  }
+}
+
 
     function showExpense(expense) {
       const li = document.createElement("li");
@@ -219,16 +225,23 @@
     }
 
     async function deleteExpense(id) {
-      try {
-        await axios.delete(
-          `${API_URL}/expense/delete/${id}`,
-          { headers: getAuthHeaders() }
-        );
-        document.getElementById(id).remove();
-      } catch {
-        alert("Error deleting expense");
-      }
+  try {
+    await axios.delete(
+      `${API_URL}/expense/delete/${id}`,
+      { headers: getAuthHeaders() }
+    );
+
+    document.getElementById(id).remove();
+
+    if (isPremiumUser) {
+      loadLeaderboard();
     }
+
+  } catch {
+    alert("Error deleting expense");
+  }
+}
+
 
   async function loadLeaderboard() {
   try {
@@ -247,7 +260,7 @@
 
     res.data.forEach(item => {
       const name = item.name || "Unknown User";
-      const total = item.total_cost || 0;
+      const total = item.totalExpense || 0;
 
       const li = document.createElement("li");
       li.textContent = `• Name: ${name}, Total Expense: ₹${total}`;
@@ -259,6 +272,7 @@
     alert("Failed to load leaderboard");
   }
 }
+
 
 
 

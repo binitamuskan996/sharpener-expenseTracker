@@ -1,4 +1,5 @@
 const Expense = require('../models/expense');
+const User = require('../models/user');
 
 const addExpense = async (req, res) => {
   try {
@@ -10,7 +11,9 @@ const addExpense = async (req, res) => {
       category,
       UserDetId: req.user.id 
     });
-
+    const user = await User.findByPk(req.user.id);
+    user.totalExpense = user.totalExpense + Number(amount);
+     await user.save();
     res.status(201).json({ expense });
   } catch (err) {
     res.status(500).json({ error: err });
@@ -29,12 +32,31 @@ const getExpenses = async (req, res) => {
 
 const deleteExpense = async (req, res) => {
   try {
-    await Expense.destroy({
-      where: { id: req.params.id,UserDetId: req.user.id }
+    const expense = await Expense.findOne({
+      where: {
+        id: req.params.id,
+        UserDetId: req.user.id
+      }
     });
-    res.status(200).json({ message: 'Deleted' });
+
+    if (!expense) {
+      return res.status(404).json({ message: "Expense not found" });
+    }
+
+    const user = await User.findByPk(req.user.id);
+
+    user.totalExpense -= Number(expense.amount);
+    if (user.totalExpense < 0) user.totalExpense = 0;
+
+    await user.save();
+
+    await expense.destroy();
+
+    res.status(200).json({ message: "Deleted" });
+
   } catch (err) {
     res.status(500).json({ error: err });
   }
 };
+
 module.exports={addExpense,getExpenses,deleteExpense}
