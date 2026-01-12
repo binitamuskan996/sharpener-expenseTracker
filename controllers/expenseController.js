@@ -1,6 +1,7 @@
 const Expense = require('../models/expense');
 const User = require('../models/user');
 let genai = require("@google/genai");
+const sequelize = require('../utils/db-connection');
 require('dotenv').config(); 
 
 let ai = new genai.GoogleGenAI({
@@ -32,6 +33,7 @@ const categorizeExpense = async (req, res) => {
   }
 };
 const addExpense = async (req, res) => {
+    const t=await sequelize.transaction()
   try {
     const { amount, description, category } = req.body;
 
@@ -39,13 +41,16 @@ const addExpense = async (req, res) => {
       amount,
       description,
       category,
-      UserDetId: req.user.id 
-    });
-    const user = await User.findByPk(req.user.id);
+      UserDetId: req.user.id ,
+    },{ transaction: t }
+  );
+    const user = await User.findByPk(req.user.id, { transaction: t });
     user.totalExpense = user.totalExpense + Number(amount);
-     await user.save();
+     await user.save({ transaction: t });
+    await t.commit();
     res.status(201).json({ expense });
   } catch (err) {
+    await t.rollback();
     res.status(500).json({ error: err });
   }
 };
@@ -61,30 +66,33 @@ const getExpenses = async (req, res) => {
 };
 
 const deleteExpense = async (req, res) => {
+    const t = await sequelize.transaction();
   try {
     const expense = await Expense.findOne({
       where: {
         id: req.params.id,
         UserDetId: req.user.id
-      }
+      },      transaction: t
     });
 
     if (!expense) {
+      await t.rollback();
       return res.status(404).json({ message: "Expense not found" });
     }
 
-    const user = await User.findByPk(req.user.id);
+    const user = await User.findByPk(req.user.id,{ transaction: t });
 
     user.totalExpense -= Number(expense.amount);
     if (user.totalExpense < 0) user.totalExpense = 0;
 
-    await user.save();
+    await user.save({ transaction: t });
 
-    await expense.destroy();
-
+    await expense.destroy({ transaction: t });
+    await t.commit();
     res.status(200).json({ message: "Deleted" });
 
   } catch (err) {
+     await t.rollback();
     res.status(500).json({ error: err });
   }
 };
