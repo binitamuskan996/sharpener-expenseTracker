@@ -246,8 +246,8 @@
     }
 
     res.data.forEach(item => {
-      const name = item.UserDet?.name || "Unknown User";
-      const total = item.totalExpense || 0;
+      const name = item.name || "Unknown User";
+      const total = item.total_cost || 0;
 
       const li = document.createElement("li");
       li.textContent = `• Name: ${name}, Total Expense: ₹${total}`;
@@ -259,6 +259,7 @@
     alert("Failed to load leaderboard");
   }
 }
+
 
 
 

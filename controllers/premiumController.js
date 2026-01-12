@@ -84,22 +84,21 @@ exports.getUserStatus = async (req, res) => {
 };
 
 exports.showLeaderboard = async (req, res) => {
-  try {
-    if (!req.user.isPremium) {
-      return res.status(403).json({ message: "Premium required" });
-    }
-
-    const leaderboard = await Expense.findAll({
+  try {  
+    const leaderboard = await User.findAll({
       attributes: [
-        'UserDetId',
-        [sequelize.fn('SUM', sequelize.col('amount')), 'totalExpense']
+        'id',
+        'name',
+        [sequelize.fn('SUM', sequelize.col('expenses.amount')), 'total_cost']
       ],
-      group: ['UserDetId'],
-      order: [[sequelize.literal('totalExpense'), 'DESC']],
-      include: [{
-        model: User,
-        attributes: ['name']
-      }]
+      include: [
+        {
+          model: Expense,
+          attributes: []
+        }
+      ],
+      group: ['UserDet.id'],
+      order: [['total_cost', 'DESC']]
     });
 
     res.status(200).json(leaderboard);
@@ -109,3 +108,5 @@ exports.showLeaderboard = async (req, res) => {
     res.status(500).json({ error: 'Failed to load leaderboard' });
   }
 };
+
+
