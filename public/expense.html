@@ -151,6 +151,37 @@
     .delete-btn:hover {
       background: #da190b;
     }
+
+    #pagination {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    #pagination button {
+      background: #667eea;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 0 10px;
+    }
+
+    #pagination button:hover {
+      background: #5568d3;
+    }
+
+    #pagination button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    #pageInfo {
+      display: inline-block;
+      margin: 0 15px;
+      font-weight: bold;
+      color: #333;
+    }
   </style>
 </head>
 
@@ -206,7 +237,11 @@
 
     <h3>Expenses</h3>
     <ul id="expenseList"></ul>
-
+    <div id="pagination">
+      <button onclick="changePage(-1)" id="prevBtn">⬅ Prev</button>
+      <span id="pageInfo"></span>
+      <button onclick="changePage(1)" id="nextBtn">Next ➡</button>
+    </div>
     <button id="leaderboardBtn" onclick="loadLeaderboard()">
       Show Leaderboard
     </button>
@@ -221,8 +256,11 @@
     let isPremiumUser = false;
     let aiSuggestedCategory = null;
     let categoryTimeout;
-
+    let currentPage = 1;
+    const limit = 10;
+    let totalPages = 1;
     const token = localStorage.getItem("token");
+    
     if (!token) {
       alert("Please login first");
       window.location.href = "login.html";
@@ -320,7 +358,7 @@
         );
 
         if (status === "SUCCESS") {
-          alert("🎉 You are now a Premium User");
+          alert("You are now a Premium User");
           isPremiumUser = true;
           updatePremiumUI();
         }
@@ -356,11 +394,12 @@
           { headers: getAuthHeaders() }
         );
 
-        showExpense(res.data.expense);
         e.target.reset();
         aiSuggestedCategory = null;
         
         document.getElementById('category').value = 'auto';
+
+        await loadExpenses(currentPage);
 
         if (isPremiumUser) {
           loadLeaderboard();
@@ -390,12 +429,11 @@
           { headers: getAuthHeaders() }
         );
 
-        document.getElementById(id).remove();
+        await loadExpenses(currentPage);
 
         if (isPremiumUser) {
           loadLeaderboard();
         }
-
       } catch {
         alert("Error deleting expense");
       }
@@ -431,6 +469,37 @@
       }
     }
 
+    async function loadExpenses(page = 1) {
+      try {
+        expenseList.innerHTML = "";
+
+        const res = await axios.get(
+          `${API_URL}/expense/get?page=${page}&limit=${limit}`,
+          { headers: getAuthHeaders() }
+        );
+
+        currentPage = res.data.currentPage;
+        totalPages = res.data.totalPages;
+
+        res.data.expenses.forEach(showExpense);
+
+        pageInfo.innerText = `Page ${currentPage} of ${totalPages}`;
+
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = currentPage === totalPages;
+
+      } catch (err) {
+        console.error("Error loading expenses:", err);
+        alert("Failed to load expenses");
+      }
+    }
+
+    function changePage(dir) {
+      const next = currentPage + dir;
+      if (next < 1 || next > totalPages) return;
+      loadExpenses(next);
+    }
+
     window.onload = async () => {
       try {
         const statusRes = await axios.get(
@@ -441,11 +510,7 @@
         isPremiumUser = statusRes.data.isPremium;
         updatePremiumUI();
 
-        const res = await axios.get(
-          `${API_URL}/expense/get`,
-          { headers: getAuthHeaders() }
-        );
-        res.data.expenses.forEach(showExpense);
+        await loadExpenses(1);
 
       } catch (err) {
         console.error(err);

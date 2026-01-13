@@ -57,13 +57,30 @@ const addExpense = async (req, res) => {
 
 const getExpenses = async (req, res) => {
   try {
-    const expenses = await Expense.findAll({where: { UserDetId: req.user.id }  
-});
-    res.status(200).json({ expenses });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Expense.findAndCountAll({
+      where: { UserDetId: req.user.id },
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.status(200).json({
+      expenses: rows,
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalExpenses: count
+    });
+
   } catch (err) {
     res.status(500).json({ error: err });
   }
 };
+
 
 const deleteExpense = async (req, res) => {
     const t = await sequelize.transaction();
