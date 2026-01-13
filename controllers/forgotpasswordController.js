@@ -65,7 +65,7 @@ const resetPassword = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    request.isActive = false; // deactivate link
+    request.isActive = false;
     await request.save();
 
     res.status(200).json({ message: 'Password updated successfully!' });
