@@ -236,6 +236,13 @@
     </form>
 
     <h3>Expenses</h3>
+    <label>Expenses per page:</label>
+    <select id="limitSelect" onchange="onLimitChange()">
+      <option value="5">5</option>
+      <option value="10">10</option>
+      <option value="20">20</option>
+      <option value="30">30</option>
+    </select>
     <ul id="expenseList"></ul>
     <div id="pagination">
       <button onclick="changePage(-1)" id="prevBtn">⬅ Prev</button>
@@ -256,9 +263,13 @@
     let isPremiumUser = false;
     let aiSuggestedCategory = null;
     let categoryTimeout;
-    let currentPage = 1;
-    const limit = 10;
+
+     let currentPage = 1;
     let totalPages = 1;
+
+    let limit = localStorage.getItem("expenseLimit") || 10;
+    limit = Number(limit);
+
     const token = localStorage.getItem("token");
     
     if (!token) {
@@ -270,6 +281,34 @@
       return { Authorization: token };
     }
 
+    function onLimitChange() {
+      limit = Number(document.getElementById("limitSelect").value);
+      localStorage.setItem("expenseLimit", limit);
+      currentPage = 1;
+      loadExpenses(currentPage);
+    }
+  async function loadExpenses(page = 1) {
+      expenseList.innerHTML = "";
+
+      const res = await axios.get(
+        `${API_URL}/expense/get?page=${page}&limit=${limit}`,
+        { headers: getAuthHeaders() }
+      );
+
+      currentPage = res.data.currentPage;
+      totalPages = res.data.totalPages;
+
+      res.data.expenses.forEach(showExpense);
+
+      pageInfo.innerText = `Page ${currentPage} of ${totalPages}`;
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
+    }
+      function changePage(dir) {
+      const next = currentPage + dir;
+      if (next < 1 || next > totalPages) return;
+      loadExpenses(next);
+    }
     async function initCashfree() {
       cashfree = await Cashfree({ mode: "sandbox" });
     }
@@ -410,33 +449,28 @@
         alert("Error adding expense");
       }
     }
-
-    function showExpense(expense) {
+  function showExpense(expense) {
       const li = document.createElement("li");
-      li.id = expense.id;
       li.innerHTML = `
-        <strong>₹${expense.amount}</strong> - ${expense.description} 
-        <span style="color: #667eea; font-weight: bold;">[${expense.category}]</span>
+        ₹${expense.amount} - ${expense.description}
+        <span style="font-weight:bold">[${expense.category}]</span>
         <button onclick="deleteExpense(${expense.id})" class="delete-btn">Delete</button>
       `;
       expenseList.appendChild(li);
     }
 
-    async function deleteExpense(id) {
-      try {
-        await axios.delete(
-          `${API_URL}/expense/delete/${id}`,
-          { headers: getAuthHeaders() }
-        );
+   async function deleteExpense(id) {
+      await axios.delete(
+        `${API_URL}/expense/delete/${id}`,
+        { headers: getAuthHeaders() }
+      );
 
-        await loadExpenses(currentPage);
-
-        if (isPremiumUser) {
-          loadLeaderboard();
-        }
-      } catch {
-        alert("Error deleting expense");
+      if (currentPage > 1 && expenseList.children.length === 1) {
+        currentPage--;
       }
+
+      loadExpenses(currentPage);
+      if (isPremiumUser) loadLeaderboard();
     }
 
     async function loadLeaderboard() {
@@ -469,36 +503,6 @@
       }
     }
 
-    async function loadExpenses(page = 1) {
-      try {
-        expenseList.innerHTML = "";
-
-        const res = await axios.get(
-          `${API_URL}/expense/get?page=${page}&limit=${limit}`,
-          { headers: getAuthHeaders() }
-        );
-
-        currentPage = res.data.currentPage;
-        totalPages = res.data.totalPages;
-
-        res.data.expenses.forEach(showExpense);
-
-        pageInfo.innerText = `Page ${currentPage} of ${totalPages}`;
-
-        document.getElementById('prevBtn').disabled = currentPage === 1;
-        document.getElementById('nextBtn').disabled = currentPage === totalPages;
-
-      } catch (err) {
-        console.error("Error loading expenses:", err);
-        alert("Failed to load expenses");
-      }
-    }
-
-    function changePage(dir) {
-      const next = currentPage + dir;
-      if (next < 1 || next > totalPages) return;
-      loadExpenses(next);
-    }
 
     window.onload = async () => {
       try {
