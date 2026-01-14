@@ -35,12 +35,13 @@ const categorizeExpense = async (req, res) => {
 const addExpense = async (req, res) => {
     const t=await sequelize.transaction()
   try {
-    const { amount, description, category } = req.body;
+    const { amount, description, category,note } = req.body;
 
     const expense = await Expense.create({
       amount,
       description,
       category,
+      note,
       UserDetId: req.user.id ,
     },{ transaction: t }
   );
