@@ -2,6 +2,9 @@ const Expense = require('../models/expense');
 const User = require('../models/user');
 let genai = require("@google/genai");
 const sequelize = require('../utils/db-connection');
+const { uploadToS3, getPresignedUrl } = require('../services/s3');
+const DownloadedFile = require('../models/downloadHistory');
+
 require('dotenv').config(); 
 
 let ai = new genai.GoogleGenAI({
@@ -115,4 +118,81 @@ const deleteExpense = async (req, res) => {
   }
 };
 
-module.exports={addExpense,getExpenses,deleteExpense,categorizeExpense}
+const downloadExpense = async (req, res) => {
+  try {
+    if (!req.user.isPremium) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const expenses = await Expense.findAll({
+      where: { UserDetId: req.user.id }
+    });
+
+    const stringifiedExpenses = JSON.stringify(expenses);
+    const filename = `Expense-${req.user.id}-${Date.now()}.txt`;
+
+    await uploadToS3(stringifiedExpenses, filename);
+
+    const newDownload = await DownloadedFile.create({
+      UserDetId: req.user.id,
+      fileURL: filename 
+    });
+
+    const presignedUrl = getPresignedUrl(filename);
+
+    res.status(200).json({ 
+      fileURL: presignedUrl,
+      downloadId: newDownload.id 
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to download expenses" });
+  }
+};
+
+
+const getDownloadHistory = async (req, res) => {
+  try {
+    if (!req.user.isPremium) return res.status(401).json({ message: "Unauthorized" });
+
+    const files = await DownloadedFile.findAll({
+      where: { UserDetId: req.user.id },
+      order: [['createdAt', 'DESC']] 
+    });
+
+    res.status(200).json({ files });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch download history" });
+  }
+};
+
+const getFileDownloadUrl = async (req, res) => {
+  try {
+    if (!req.user.isPremium) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const fileId = req.params.id;
+
+    const file = await DownloadedFile.findOne({
+      where: { id: fileId, UserDetId: req.user.id }
+    });
+
+    if (!file) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    const freshUrl = getPresignedUrl(file.fileURL);
+    res.status(200).json({ url: freshUrl });
+
+  } catch (err) {
+    console.error("Error generating fresh URL:", err);
+    res.status(500).json({ error: "Failed to get download URL" });
+  }
+};
+
+
+module.exports={addExpense,getExpenses,deleteExpense,categorizeExpense,downloadExpense,getDownloadHistory, getFileDownloadUrl}

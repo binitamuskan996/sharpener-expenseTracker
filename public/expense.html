@@ -131,7 +131,19 @@
     #leaderboardBtn:hover {
       background: #5568d3;
     }
+#downloadBtn {
+  margin-top: 10px;
+  background: #667eea;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
 
+#downloadBtn:hover {
+  background: #5568d3;
+}
     #leaderboardTitle {
       margin-top: 30px;
       display: none;
@@ -250,9 +262,13 @@
     <button id="leaderboardBtn" onclick="loadLeaderboard()">
       Show Leaderboard
     </button>
-
+    <button id="downloadBtn" onclick="downloadExpense()" style="display:none;">
+  Download Expense Report
+</button>
     <h3 id="leaderboardTitle">Leaderboard</h3>
     <ul id="leaderboard"></ul>
+    <h3>Download History</h3>
+<ul id="historyList"></ul>
   </div>
 
   <script>
@@ -315,15 +331,19 @@
     function updatePremiumUI() {
       const premiumSection = document.getElementById("premiumSection");
       const leaderboardBtn = document.getElementById("leaderboardBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
 
       if (isPremiumUser) {
         premiumSection.innerHTML =
           '<span class="premium-badge">⭐ Premium User</span>';
         leaderboardBtn.style.display = "inline-block";
+            downloadBtn.style.display = "inline-block";
+
       } else {
         premiumSection.innerHTML =
           '<button class="premium-btn" onclick="buyPremium()">Buy Premium</button>';
         leaderboardBtn.style.display = "none";
+            if (downloadBtn) downloadBtn.style.display = "none";
       }
     }
 
@@ -503,6 +523,94 @@
       }
     }
 
+async function downloadExpense() {
+  try {
+    const res = await axios.get(`${API_URL}/expense/download`, { 
+      headers: getAuthHeaders() 
+    });
+
+    window.open(res.data.fileURL);
+
+    if (isPremiumUser) {
+      await loadDownloadHistory();
+    }
+
+  } catch (err) {
+    if (err.response && err.response.status === 401) {
+      alert("Only premium users can download reports");
+    } else {
+      alert("Download failed");
+    }
+  }
+}
+
+async function loadDownloadHistory() {
+  try {
+    const res = await axios.get(`${API_URL}/expense/download/history`, {
+      headers: { Authorization: localStorage.getItem("token") }
+    });
+
+    const historyList = document.getElementById("historyList");
+    historyList.innerHTML = "";
+
+    if (!res.data.files || res.data.files.length === 0) {
+      historyList.innerHTML = "<li>No previous downloads</li>";
+      return;
+    }
+
+    res.data.files.forEach(file => {
+      const li = document.createElement("li");
+
+      const date = new Date(file.createdAt).toLocaleString();
+
+      li.innerHTML = `
+        <span>${date}</span>
+        <button onclick="downloadFile('${file.id}')">Download</button>
+      `;
+
+      historyList.appendChild(li);
+    });
+
+  } catch (err) {
+    console.error("Error loading history:", err);
+  }
+}
+
+async function downloadFile(fileId) {
+  try {
+    const res = await axios.get(`${API_URL}/expense/download/file/${fileId}`, {
+      headers: getAuthHeaders()
+    });
+
+    const url = res.data.url; 
+
+    const link = document.createElement('a');
+    link.href = url;
+
+    const dateStr = new Date().toLocaleDateString().replace(/\//g, '-');
+    link.download = `Expenses-${dateStr}.txt`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+  } catch (err) {
+    console.error("Download error:", err);
+
+    if (err.response) {
+      if (err.response.status === 401) {
+        alert("Only premium users can download reports");
+      } else if (err.response.status === 404) {
+        alert("File not found");
+      } else {
+        alert("Download failed. Please try again.");
+      }
+    } else {
+      alert("Download failed. Check your internet connection.");
+    }
+  }
+}
+
 
     window.onload = async () => {
       try {
@@ -513,7 +621,9 @@
 
         isPremiumUser = statusRes.data.isPremium;
         updatePremiumUI();
-
+   if (isPremiumUser) {
+      await loadDownloadHistory();
+    }
         await loadExpenses(1);
 
       } catch (err) {
