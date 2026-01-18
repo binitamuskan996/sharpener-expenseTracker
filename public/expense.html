@@ -267,7 +267,7 @@
 </button>
     <h3 id="leaderboardTitle">Leaderboard</h3>
     <ul id="leaderboard"></ul>
-    <h3>Download History</h3>
+<h3 id="historyTitle" style="display:none;">Download History</h3>
 <ul id="historyList"></ul>
   </div>
 
@@ -332,18 +332,21 @@
       const premiumSection = document.getElementById("premiumSection");
       const leaderboardBtn = document.getElementById("leaderboardBtn");
   const downloadBtn = document.getElementById("downloadBtn");
+  const historyTitle = document.getElementById("historyTitle");
 
       if (isPremiumUser) {
         premiumSection.innerHTML =
           '<span class="premium-badge">⭐ Premium User</span>';
         leaderboardBtn.style.display = "inline-block";
             downloadBtn.style.display = "inline-block";
-
+                historyTitle.style.display = "inline-block";
       } else {
         premiumSection.innerHTML =
           '<button class="premium-btn" onclick="buyPremium()">Buy Premium</button>';
         leaderboardBtn.style.display = "none";
             if (downloadBtn) downloadBtn.style.display = "none";
+            if (historyTitle) historyTitle.style.display = "none";
+
       }
     }
 
